@@ -44,16 +44,19 @@ def run_one(config_path: str, warmstart: str | None = None) -> None:
     device = trainer.device
     m = cfg.get("model_params", {})
     ds = cfg["dataset"]
-    if m.get("arch", "mttgnet") == "clean":
-        # Paper (clean) architecture: src/mttgnet_test.py.  The clean switches
-        # must be forwarded explicitly — the wrapper has no legacy defaults.
+    if cfg.get("model_type") == "mttgnet_final_noshift" or (
+            m.get("arch", "mttgnet") == "clean" and m.get("wide_mode") is not None):
+        from experiments.final_noshift.model import build_model as build_final_model
+        model = build_final_model(cfg, trainer)
+    elif m.get("arch", "mttgnet") == "clean":
+        # Paper (clean) structured-only architecture: src/mttgnet_test.py.
         from src.mttgnet_test import MTTGNetTestWrapper
         model = MTTGNetTestWrapper(
             num_features=trainer.num_features,
-            hidden_dim=m.get("hidden_dim", 96),
+            hidden_dim=m.get("hidden_dim", 64),
             horizon=ds["horizon"],
             seq_len=ds["recent_length"],
-            dropout=m.get("dropout", 0.15),
+            dropout=m.get("dropout", 0.25),
             memory_slots=m.get("memory_slots", 128),
             mem_top_k=m.get("mem_top_k", 8),
             num_gru_layers=m.get("num_gru_layers", 2),
@@ -61,14 +64,14 @@ def run_one(config_path: str, warmstart: str | None = None) -> None:
             use_time_bias=m.get("use_time_bias", True),
             use_memory=m.get("use_memory", False),
             use_variable_encoder=m.get("use_variable_encoder", True),
-            use_shift_encoder=m.get("use_shift_encoder", True),
+            use_shift_encoder=m.get("use_shift_encoder", False),
             use_var_gnn=m.get("use_var_gnn", True),
             use_calendar=m.get("use_calendar", True),
             var_encoder_type=m.get("var_encoder_type", "gat"),
             co2_index=cfg.get("data", {}).get("co2_index", 1),
             co2_mean=0.0, co2_std=1.0,
             co2_min=m.get("co2_min", 280.0), co2_max=m.get("co2_max", 1200.0),
-            query_refine=m.get("query_refine", False),
+            query_refine=m.get("query_refine", True),
             mem_clean=m.get("mem_clean", True),
             decoder_bypass=m.get("decoder_bypass", False),
             time_bias_mode=m.get("time_bias_mode", "additive"),
@@ -76,10 +79,11 @@ def run_one(config_path: str, warmstart: str | None = None) -> None:
             use_mono_reg=m.get("use_mono_reg", False),
             mono_weight=m.get("mono_weight", 0.1),
             use_co2_timebias=m.get("use_co2_timebias", False),
+            use_delta_head=m.get("use_delta_head", False),
             target_index=cfg.get("data", {}).get("target_index", 0),
             use_future_co2=ds.get("use_future_co2", False),
-            co2_attention_modulation=m.get('co2_attention_modulation',True),
-            co2_additive_bias=m.get('co2_additive_bias',True),
+            co2_attention_modulation=m.get('co2_attention_modulation', True),
+            co2_additive_bias=m.get('co2_additive_bias', True),
             fusion_sources=m['fusion_sources'],
         ).to(device)
     else:

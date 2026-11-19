@@ -57,6 +57,10 @@ def build_model(cfg, trainer) -> MTTGNetWrapper:
     record_fusion_config(cfg)
     m = cfg.get("model_params", {})
     ds = cfg["dataset"]
+    if cfg.get("model_type") == "mttgnet_final_noshift" or (
+            m.get("arch", "mttgnet") == "clean" and m.get("wide_mode") is not None):
+        from experiments.final_noshift.model import build_model as build_final_model
+        return build_final_model(cfg, trainer)
     kw = dict(
         num_features=trainer.num_features,
         hidden_dim=m.get("hidden_dim", 96),
@@ -134,6 +138,7 @@ def build_model(cfg, trainer) -> MTTGNetWrapper:
         fusion_sources=m.get('fusion_sources', 3),
         co2_attention_modulation=m.get('co2_attention_modulation', True),
         co2_additive_bias=m.get('co2_additive_bias', True),
+        use_delta_head=m.get("use_delta_head", False),
     )
     _check_forwarded(kw)
     if m.get("arch", "mttgnet") == "clean":

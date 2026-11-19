@@ -546,6 +546,8 @@ class Trainer:
         self.training_stop_reason = 'epoch_cap'
 
         for epoch in range(1, epochs + 1):
+            if hasattr(model, 'set_training_epoch'):
+                model.set_training_epoch(epoch)
             if deadline is not None and time.monotonic() >= deadline:
                 self.training_stop_reason = 'budget_exhausted'
                 break

@@ -434,7 +434,9 @@ class MTTGNetTestModel(nn.Module):
                  time_bias_scale=1.0, shift_bias_scale=1.0,
                  memory_gate_init=-3.0,
                  co2_min=280.0, co2_max=1200.0,
-                 use_multiscale_co2=False, **kwargs):
+                 use_multiscale_co2=False, use_delta_head=False,
+                 use_anchor_head=False, anchor_decay=0.1,
+                 raw_mlp=False, raw_mlp_hidden=128, **kwargs):
         super().__init__()
         if use_multiscale_co2:
             raise NotImplementedError(
@@ -489,6 +491,33 @@ class MTTGNetTestModel(nn.Module):
         self.temporal_norm = nn.LayerNorm(d_model)
         self.temporal_dropout = nn.Dropout(dropout)
 
+        # ①b Optional flat MLP on the *raw* window, added to the temporal context.
+        #     The winning MLP baseline sees flatten(L x 10) directly; the GRU only sees
+        #     its d_model projection, so this gives the model the same view at ~150K
+        #     parameters (1200 -> 128 -> d_model) instead of flatten(L*d_model).
+        self.raw_mlp = None
+        if raw_mlp:
+            self.raw_mlp = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(seq_len * num_vars, int(raw_mlp_hidden)), nn.GELU(),
+                nn.Dropout(dropout),
+                nn.Linear(int(raw_mlp_hidden), d_model),
+            )
+
+        # ①c Optional delta (persistence-anchored) parametrisation: the decoder output is
+        #     added to the last observed target, so the model predicts the *change*.
+        #     Short leads then start at the persistence forecast instead of a cold guess.
+        self.use_delta_head = bool(use_delta_head)
+        # Per-lead, learnable anchor on the last observation: weight 1 at the first lead,
+        # decaying towards 0 over the horizon.  ``use_delta_head`` is the hard (all-lead)
+        # version; this lets the model anchor short leads and still predict an absolute
+        # level at 15-30 d, which is where the hard version loses skill.
+        self.use_anchor_head = bool(use_anchor_head)
+        if self.use_anchor_head:
+            progress = torch.arange(horizon, dtype=torch.float32) / max(horizon - 1, 1)
+            self.anchor_weight = nn.Parameter(
+                torch.exp(-progress / max(float(anchor_decay), 1e-3)))
+
         # ② Variable encoder on anchors
         self.anchor_var_encoder = (AnchorVariableEncoder(
             num_vars, d_model, num_heads, dropout,
@@ -542,12 +571,21 @@ class MTTGNetTestModel(nn.Module):
         else:
             co2_raw = x_recent[:, -1, co2_idx:co2_idx + 1]
 
+        # Raw (pre-GNN) window for the flat-MLP branch, and the last observed target for
+        # the persistence-anchored (delta) parametrisation.  Captured before the graph
+        # mixes variables, exactly like the MLP baseline's input.
+        raw_recent = x_recent
+        last_target = (raw_recent[:, -1, self._target_index]
+                       if self._target_index < N else None)
+
         if self.var_gnn is not None:
             x_recent = self.var_gnn(x_recent)
 
         x = self.input_proj(x_recent)
         _, hn = self.gru(x)
         temporal_context = self.temporal_dropout(self.temporal_norm(hn[-1]))
+        if self.raw_mlp is not None:
+            temporal_context = temporal_context + self.raw_mlp(raw_recent)
 
         K_d = daily_anchor.shape[2]
         K_y = yearly_anchor.shape[2]
@@ -639,6 +677,15 @@ class MTTGNetTestModel(nn.Module):
                                   temporal_context)
         prediction = prediction + self.shift_bias_scale * shift_info["pred_bias"].unsqueeze(1)
 
+        # Persistence-anchored (delta) parametrisation: add the last observed target so
+        # the head models the change.  At short leads the model then starts at
+        # persistence instead of learning an absolute level from scratch.
+        if last_target is not None:
+            if self.use_anchor_head:
+                prediction = prediction + self.anchor_weight.unsqueeze(0) * last_target.unsqueeze(1)
+            elif self.use_delta_head:
+                prediction = prediction + last_target.unsqueeze(1)
+
         return {
             "prediction": prediction,
             "temporal_context": temporal_context,
@@ -703,6 +750,8 @@ class MTTGNetTestWrapper(nn.Module):
                  mem_clean=True, decoder_bypass=False,
                  co2_mode="counterfactual", gnn_dynamic=False,
                  co2_ref_ppm=280.0,
+                 use_delta_head=False, raw_mlp=False, raw_mlp_hidden=128,
+                 use_anchor_head=False, anchor_decay=0.1,
                  **kwargs):
         super().__init__()
         if temporal_encoder not in (None, "gru"):
@@ -768,6 +817,9 @@ class MTTGNetTestWrapper(nn.Module):
             use_multiscale_co2=use_multiscale_co2,
             co2_attention_modulation=kwargs.pop('co2_attention_modulation',True),
             co2_additive_bias=kwargs.pop('co2_additive_bias',True),
+            use_delta_head=use_delta_head, raw_mlp=raw_mlp,
+            raw_mlp_hidden=raw_mlp_hidden,
+            use_anchor_head=use_anchor_head, anchor_decay=anchor_decay,
             fusion_sources=kwargs.pop('fusion_sources', None))
 
     def forward(self, x_recent, daily_anchor=None, yearly_anchor=None,

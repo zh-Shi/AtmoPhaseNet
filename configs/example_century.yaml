@@ -1,7 +1,8 @@
-# Runtime example. Supply prepared data or edit the data paths before training.
+# Runtime example matching the final manuscript monthly CMIP6 conditional rollout protocol.
+# Supply prepared data or edit the data paths before training.
 # Use experiments/cmip6/run_cmip6_pure_ml.py, not run_model.py.
-model_type: mttgnet
-seed: 123
+model_type: mttgnet_final_noshift
+seed: 42
 device: cuda
 data:
   target_index: 0
@@ -39,8 +40,9 @@ dataset:
     timestamps: data/processed/cmip6_tas/CNRM-ESM2-1/ssp585_timestamps.npy
   scaler_fit: train
 model_params:
-  hidden_dim: 96
-  dropout: 0.15
+  arch: clean
+  hidden_dim: 64
+  dropout: 0.25
   memory_slots: 128
   mem_top_k: 8
   num_gru_layers: 2
@@ -48,12 +50,12 @@ model_params:
   fusion_sources: 3
   use_var_gnn: true
   use_variable_encoder: true
-  use_shift_encoder: true
+  use_shift_encoder: false
   use_time_bias: true
   use_gate: true
   var_encoder_type: gat
+  gat_version: gat
   use_calendar: true
-  arch: clean
   query_refine: true
   mem_clean: true
   decoder_bypass: false
@@ -61,6 +63,13 @@ model_params:
   co2_mode: counterfactual
   co2_min: 280.0
   co2_max: 1200.0
+  use_delta_head: true
+  wide_mode: blend
+  wide_hidden: 128
+  wide_zero_init: false
+  wide_gate_hidden: 64
+  wide_gate_init_bias: 0.0
+  wide_decay_leads: 0.0
 training:
   batch_size: 64
   epochs: 400
@@ -79,6 +88,8 @@ loss:
   delta_weight: 0.1
   horizon_weight_power: 1.0
   horizon_weight_max: 1.5
+  short_lead_loss_steps: 0
+  short_lead_loss_weight: 0.0
   extreme_weight: 0.0
   extreme_threshold: 1.5
 output:

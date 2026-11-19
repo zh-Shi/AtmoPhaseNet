@@ -138,6 +138,19 @@ def build_model(cfg: dict, num_features: int) -> MTTGNetWrapper:
     # needs the REAL ppm range to reconstruct CO2 for the counterfactual
     # reference — the data pipeline scales CO2 to [0,1] over 280-1200 ppm, so
     # the identity range (0/1) the legacy path uses would be wrong there.
+    if cfg.get("model_type") == "mttgnet_final_noshift" or (
+            m.get("arch", "mttgnet") == "clean" and m.get("wide_mode") is not None):
+        from experiments.final_noshift.model import build_latest_model
+        return build_latest_model(
+            num_features=num_features,
+            seq_len=d["recent_length"],
+            horizon=d["horizon"],
+            calendar_dim=m.get("calendar_dim", 5),
+            co2_index=cfg["data"].get("co2_index", 1),
+            target_index=cfg["data"].get("target_index", 0),
+            model_params=m,
+            use_future_co2=d.get("use_future_co2", False),
+        )
     if m.get("arch", "mttgnet") == "clean":
         from src.mttgnet_test import MTTGNetTestWrapper
         return MTTGNetTestWrapper(
@@ -165,6 +178,7 @@ def build_model(cfg: dict, num_features: int) -> MTTGNetWrapper:
             co2_mode=m.get("co2_mode", "counterfactual"),
             use_multiscale_co2=m.get("use_multiscale_co2", False),
             co2_anchor_a=m.get("co2_anchor_a", 0.0),
+            use_delta_head=m.get("use_delta_head", False),
             co2_index=cfg["data"].get("co2_index", 1),
             co2_mean=0.0, co2_std=1.0,
             co2_min=m.get("co2_min", 280.0), co2_max=m.get("co2_max", 1200.0),
