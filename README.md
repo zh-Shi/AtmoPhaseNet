@@ -1,13 +1,6 @@
-# MTTGNet: Multi-Period Graph-Temporal Modeling for Global-Mean Near-Surface Temperature Prediction
+# AtmoPhaseNet: Multi-Period Graph-Temporal Modeling for Global-Mean Near-Surface Temperature Prediction
 
-MTTGNet is a two-path neural architecture for synoptic-to-subseasonal prediction of
-global-mean near-surface air temperature. Its structured pathway combines recent-window
-graph-temporal encoding, calendar-aligned daily and annual historical retrieval, and
-current-state referencing (`y_t + delta`), while a parallel direct pathway maps the
-flattened recent multivariate window and pooled target-calendar features to absolute
-temperature across all forecast leads. A calendar- and lead-dependent sigmoid gate
-blends the two predictions in a single forward pass. Atmospheric CO2 enters as a
-standard multivariate input covariate without a dedicated CO2-conditioning branch.
+AtmoPhaseNet (Atmospheric Phase-Conditioned Forecasting Network; internal module name `mttgnet` retained for checkpoint compatibility) is a two-path neural architecture for synoptic-to-subseasonal prediction of global-mean near-surface air temperature. Its structured pathway combines recent-window graph-temporal encoding, calendar-aligned daily and annual historical retrieval, and current-state referencing (`y_t + delta`), while a parallel direct pathway maps the flattened recent multivariate window and pooled target-calendar features to absolute temperature across all forecast leads. A calendar- and lead-dependent sigmoid gate blends the two predictions in a single forward pass. Atmospheric CO2 enters as a standard multivariate input covariate without a dedicated CO2-conditioning branch.
 
 Weather examples predict 6-hourly global-mean ERA5 2-m air temperature over 7 days
 (`H=28`) and 30 days (`H=120`) using a unified hyperparameter and training recipe.
@@ -158,8 +151,8 @@ contracts, and recursive rollout without future temperature feedback.
 ## Citation and license
 
 ```bibtex
-@misc{shi2026mttgnet,
-  title  = {Multi-Period Graph-Temporal Modeling for Global-Mean Near-Surface Temperature Prediction},
+@misc{shi2026atmophasenet,
+  title  = {AtmoPhaseNet: Multi-Period Graph-Temporal Modeling for Global-Mean Near-Surface Temperature Prediction},
   author = {Shi, Zihao and Wang, Zhiguo and Chen, Ziwei},
   year   = {2026},
   note   = {Manuscript},

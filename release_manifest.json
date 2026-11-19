@@ -15,7 +15,7 @@
     "experiments/mttgnet_v2/fusion.py": "b27012906d20b9965ab9a1fb3a728e08cbb888224aaa905f55cd4ebd84f535ac",
     "experiments/mttgnet_v2/wide.py": "06c2cd9731f118395665371f3ee56f969586430f25bf4c0deb98a45b14dcda03",
     "LICENSE": "be7e3d70977108af6aa4748ab75406e7b1473cf298072057740a6d69ac26c2ea",
-    "README.md": "6977d0b53e024d14843ecd17fd28077524cd679da4aa49e42632bc0446120120",
+    "README.md": "300b9eed4216bd5a8bccfc4de7a50b33fa8179a2b186a3a01e238badaa1fd272",
     "requirements.txt": "cc998c26c62bcd47c6de08512da1aef0103888d843328c50a87fff7d20fbee72",
     "run_model.py": "9eef7badb94c929bf456f58eae5453d4cbf2012bf53cb49d8eeeee961c30ca55",
     "run_mttgnet_projections.py": "e72e7746172f7f74ea41ee28840dd38f77b2d754edd1e7a6971e07a548c7523f",
