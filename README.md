@@ -156,7 +156,7 @@ contracts, and recursive rollout without future temperature feedback.
   author = {Shi, Zihao and Wang, Zhiguo and Chen, Ziwei},
   year   = {2026},
   note   = {Manuscript},
-  url    = {https://github.com/zh-Shi/MTTGNet}
+  url    = {https://github.com/zh-Shi/AtmoPhaseNet}
 }
 ```
 
